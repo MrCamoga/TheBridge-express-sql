@@ -76,3 +76,36 @@ app.post("/categories", (req,res) => {
                 });
         });
 });
+
+app.put("/products/:id", (req,res) => {
+	const id = +req.params.id;
+	if(isNaN(id)) {
+		return res.status(400).send("Id must be numeric");
+	}
+        const { name = null, description = null, category_id = null } = req.body;
+        if(name === "") {
+		return res.status(400).send("Name cannot be null");
+	}
+	const sql = `UPDATE products SET name = COALESCE(?,name), description = COALESCE(?,description), category_id = COALESCE(?,category_id) WHERE id = ?`;
+        db.execute(sql, [name,description,category_id,id], (err,result) => {
+                if(err) throw err;
+		res.send(result); // todo
+        });
+});
+
+app.put("/categories/:id", (req,res) => {
+	const id = +req.params.id;
+	if(isNaN(id)) {
+		return res.status(400).send("Id must be numeric");
+	}
+        const { name = null } = req.body;
+        if(name === "") {
+		return res.status(400).send("Name cannot be null");
+	}
+	const sql = `UPDATE categories SET name = COALESCE(?,name) WHERE id = ?`;
+        db.execute(sql, [name,id], (err,result) => {
+                if(err) throw err;
+		res.send(result); // todo
+        });
+});
+
