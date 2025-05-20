@@ -95,7 +95,8 @@ app.put("/products/:id", async (req,res) => {
 	const sql = `UPDATE products SET name = COALESCE(?,name), description = COALESCE(?,description), category_id = COALESCE(?,category_id) WHERE id = ?`;
         try {
 		const [result,_] = await db.execute(sql, [name,description,category_id,id]);
-		res.send(result);
+		if(result.affectedRows > 0) res.send({message:"OK"});
+		else res.status(404).send({message: "Not Found"});
         } catch(err) {
 		console.error(err);
 	}
@@ -113,7 +114,8 @@ app.put("/categories/:id", async (req,res) => {
 	const sql = `UPDATE categories SET name = COALESCE(?,name) WHERE id = ?`;
         try {
 		const [result,_] = await db.execute(sql, [name,id]);
-		res.send(result);
+		if(result.affectedRows > 0) res.send({message:"OK"});
+		else res.status(404).send({message: "Not Found"});
         } catch(err) {
 		console.error(err);
 	}
