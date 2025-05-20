@@ -315,10 +315,11 @@ app.get("/userOrders", async (req,res) => {
 			'first_name', A.first_name,
 			'last_name', A.last_name,
 			'email', A.email,
-			'orders', (
+			'orders', COALESCE((
 				SELECT JSON_ARRAYAGG(JSON_OBJECT(
 					'order_id', B.id,
 					'order_date', B.date,
+					'total_price', (SELECT SUM(individual_price*quantity) FROM orderproducts WHERE orderid = B.id),
 					'items', (SELECT JSON_ARRAYAGG(
 						JSON_OBJECT(
 							'name', D.name,
@@ -332,7 +333,7 @@ app.get("/userOrders", async (req,res) => {
 				))
 				FROM orders B
 				WHERE B.userid = A.id
-			)
+			), JSON_ARRAY())
 		)) AS userOrders
 		FROM users A
 		`;
