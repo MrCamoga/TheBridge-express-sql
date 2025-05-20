@@ -227,6 +227,24 @@ app.post("/orders", async (req,res) => {
 	}
 });
 
+app.put("/users/:id", async (req,res) => {
+	const id = +req.params.id;
+	if(isNaN(id)) {
+		return res.status(400).send("Id must be numeric");
+	}
+        const {first_name = null, last_name = null, email = null, password = null } = req.body;
+        if(first_name === "" || email === "" || password === "") {
+		return res.status(400).send("Invalid body");
+	}
+	const sql = `UPDATE users SET first_name = COALESCE(?,first_name), last_name = COALESCE(?,last_name), email = COALESCE(?,email) WHERE id = ?`;
+        try {
+		const [result,_] = await db.execute(sql, [first_name, last_name, email, id]); // TODO add password
+		res.send(result);
+        } catch(err) {
+		console.error(err);
+	}
+});
+
 app.get("/users", async (req,res) => {
 	const sql = `SELECT id, first_name, last_name, email, creation_date FROM users`;
 	simpleSelect(sql,res);
