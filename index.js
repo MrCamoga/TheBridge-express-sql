@@ -21,7 +21,7 @@ let db;
 app.get("/createTables", async (req,res) => {
 	const queries = [
 		"CREATE TABLE IF NOT EXISTS categories (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL)",
-		"CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL, description VARCHAR(150), category_id TINYINT UNSIGNED, CONSTRAINT category_ibfk_1 FOREIGN KEY (category_id) REFERENCES categories(id), KEY name (name))",
+		"CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL, description VARCHAR(150), category_id TINYINT UNSIGNED, price INT UNSIGNED NOT NULL, CONSTRAINT category_ibfk_1 FOREIGN KEY (category_id) REFERENCES categories(id), KEY name (name))",
 		"CREATE TABLE IF NOT EXISTS users (id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(50) NOT NULL, last_name VARCHAR(50), email VARCHAR(200) NOT NULL, salt CHAR(32) NOT NULL, password CHAR(128) NOT NULL, creation_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY (email))",
 		"CREATE TABLE IF NOT EXISTS orders (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, userid INT UNSIGNED NOT NULL, date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT userid_ibfk_1 FOREIGN KEY (userid) REFERENCES users(id))",
 		"CREATE TABLE IF NOT EXISTS orderproducts (orderid BIGINT UNSIGNED NOT NULL, productid INT UNSIGNED NOT NULL, quantity SMALLINT UNSIGNED NOT NULL, individual_price INT UNSIGNED NOT NULL, PRIMARY KEY (orderid,productid))"
@@ -42,17 +42,18 @@ app.listen(PORT, () => {
 })
 
 app.post("/products", async (req,res) => {
-        const {name = null, description = null, category_id = null} = req.body;
-        if(!name) {
+        const {name, price, description = null, category_id = null} = req.body;
+        if(!name || !price) {
                 return res.status(400).send("Name cannot be null");
         }
-        const sql = `INSERT INTO products (name,description,category_id) VALUES (?,?,?)`;
+        const sql = `INSERT INTO products (name,description,category_id,price) VALUES (?,?,?,?)`;
         try {
-		const [result,_] = await db.execute(sql, [name,description,category_id]);
+		const [result,_] = await db.execute(sql, [name,description,category_id,price]);
 		res.send({
 			id: result.insertId,
-			name, // TODO parse name to string
+			name: name.toString(),
 			description,
+			price: +price,
 			category_id
 		});
 	} catch(err) {
@@ -70,7 +71,7 @@ app.post("/categories", async (req,res) => {
 		const [result,_] = await db.execute(sql, [name]);
 		res.send({
                         id: result.insertId,
-                        name // TODO parse name to string
+                        name: name.toString()
                 });
 	} catch(err) {
 		console.error(err)
@@ -102,7 +103,7 @@ app.put("/categories/:id", async (req,res) => {
 	}
         const { name = null } = req.body;
         if(name === "") {
-		return res.status(400).send("Name cannot be null");
+		return res.status(400).send("Name cannot be empty");
 	}
 	const sql = `UPDATE categories SET name = COALESCE(?,name) WHERE id = ?`;
         try {
@@ -174,7 +175,7 @@ app.get("/categories/:id", async (req,res) => {
         const sql = `SELECT * FROM categories WHERE id = ?`;
         try {
 		const [result,fields] = await db.execute(sql,[id]);
-		if(result.length > 0) res.send(result[0]);
+		if(result.length > 0) res.send(result);
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
 		console.error(err);
@@ -194,7 +195,7 @@ app.delete("/products/:id", async (req,res) => {
 });
 
 app.post("/users", async (req,res) => {
-        const {first_name = null, last_name = null, email = null, password = null } = req.body;
+        const {first_name, last_name = null, email, password } = req.body;
         if(!email || !password || !first_name) {
                 return res.status(400).send("Invalid body");
         }
@@ -207,4 +208,36 @@ app.post("/users", async (req,res) => {
 		last_name,
 		email
 	});
+});
+
+app.post("/orders", async (req,res) => {
+        const {userid, items = [] } = req.body; // items: [[product_id, quantity],...]
+        if(!userid || items.length == 0) {
+                return res.status(400).send("Invalid body");
+        }
+        const sql_order = `INSERT INTO orders (userid) VALUES (?)`;
+	const sql_items = `
+		INSERT INTO orderproducts (orderid, productid, quantity, individual_price)
+		WITH items (productid,quantity) AS (
+			SELECT * FROM (VALUES ?) AS C
+		)
+		SELECT ?, A.productid, A.quantity, B.price FROM items A
+		INNER JOIN products B ON A.productid = B.id
+	`;
+	try {
+		await db.query("START TRANSACTION");
+		const [result,_] = await db.execute(sql_order, [userid]);
+		const orderid = result.insertId;
+		const [result2,__] = await db.query(sql_items, [items, orderid]);
+		res.send({
+			id: orderid,
+			userid,
+			date: new Date()
+		});
+
+		await db.query("COMMIT");
+	} catch(err) {
+		await db.query("ROLLBACK");
+		console.error(err)
+	}
 });
