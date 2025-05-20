@@ -18,6 +18,15 @@ let db;
 	});
 })();
 
+async function simpleSelect(sql,res) {
+	try {
+		const [result,fields] = await db.execute(sql);
+		res.send(result);
+	} catch(err) {
+		console.error(err);
+	}
+}
+
 app.get("/createTables", async (req,res) => {
 	const queries = [
 		"CREATE TABLE IF NOT EXISTS categories (id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL)",
@@ -36,10 +45,6 @@ app.get("/createTables", async (req,res) => {
 		res.status(500).send({message: err.code});
 	}
 });
-
-app.listen(PORT, () => {
-        console.log(`Server listening on port ${PORT}`);
-})
 
 app.post("/products", async (req,res) => {
         const {name, price, description = null, category_id = null} = req.body;
@@ -116,32 +121,17 @@ app.put("/categories/:id", async (req,res) => {
 
 app.get("/products", async (req, res) => {
 	const sql = `SELECT * FROM products`;
-	try {
-		const [result,fields] = await db.execute(sql);
-		res.send(result);
-	} catch(err) {
-		console.error(err);
-	}
+	await simpleSelect(sql,res);
 });
 
 app.get("/categories", async (req, res) => {
 	const sql = `SELECT * FROM categories`;
-	try {
-		const [result,fields] = await db.execute(sql);
-		res.send(result);
-	} catch(err) {
-		console.error(err);
-	}
+	await simpleSelect(sql,res);
 });
 
 app.get("/productsAll", async (req, res) => {
 	const sql = `SELECT A.name, A.description, B.name AS category FROM products A LEFT JOIN categories B ON A.category_id = B.id`;
-	try {
-		const [result,fields] = await db.execute(sql);
-		res.send(result);
-	} catch(err) {
-		console.error(err);
-	}
+	await simpleSelect(sql,res);
 });
 
 app.get("/products/:idOrName", async (req,res) => {
@@ -159,12 +149,7 @@ app.get("/products/:idOrName", async (req,res) => {
 
 app.get("/productsSorted", async (req, res) => {
 	const sql = `SELECT * FROM products ORDER BY id DESC`;
-        try {
-		const [result,fields] = await db.execute(sql);
-		res.send(result);
-	} catch(err) {
-		console.error(err);
-	}
+	await simpleSelect(sql,res);
 });
 
 app.get("/categories/:id", async (req,res) => {
@@ -241,3 +226,105 @@ app.post("/orders", async (req,res) => {
 		console.error(err)
 	}
 });
+
+app.get("/users", async (req,res) => {
+	const sql = `SELECT id, first_name, last_name, email, creation_date FROM users`;
+	simpleSelect(sql,res);
+});
+
+app.get("/users/:id", async (req,res) => {
+	const id = +req.params.id;
+	if(isNaN(id)) {
+		return res.status(400).send("Id must be numeric");
+	}
+	const sql = `SELECT id, first_name, last_name, email, creation_date FROM users WHERE id = ?`;
+	try {
+		const [result,fields] = await db.execute(sql,[id]);
+		if(result.length > 0) res.send(result);
+		else res.status(404).send({message:"Not Found"});
+	} catch(err) {
+		console.error(err);
+	}
+});
+
+app.delete("/users/:id", async (req,res) => {
+	const id = +req.params.id;
+	const sql = "DELETE FROM users WHERE id = ?";
+	try {
+		const [result,fields] = await db.execute(sql,[id]);
+		if(result.affectedRows > 0) res.send({message:"OK"});
+		else res.status(404).send({message:"Not Found"});
+	} catch(err) {
+		console.error(err);
+	}
+});
+
+app.get("/orders", async (req,res) => {
+	const sql = `
+		SELECT JSON_ARRAYAGG(JSON_OBJECT(
+			'order_id', A.id,
+			'buyer', CONCAT(first_name," ",last_name),
+			'order_date', A.date,
+			'items', (SELECT JSON_ARRAYAGG(
+				JSON_OBJECT(
+					'name', D.name,
+					'quantity', C.quantity,
+					'unit_price', C.individual_price
+				))
+				FROM orderproducts C
+				INNER JOIN products D ON C.productid = D.id
+				WHERE C.orderid = A.id
+			)
+		)) AS orders
+		FROM orders A
+		INNER JOIN users B on A.userid = B.id
+		`;
+	try {
+		const [result,_] = await db.query(sql);
+		res.setHeader('Content-Type','application/json');
+		res.send(result[0].orders);
+	} catch(err) {
+		console.error(err);
+	}
+})
+
+app.get("/userOrders", async (req,res) => {
+	const sql = `
+		SELECT JSON_ARRAYAGG(JSON_OBJECT(
+			'user_id', A.id,
+			'first_name', A.first_name,
+			'last_name', A.last_name,
+			'email', A.email,
+			'orders', (
+				SELECT JSON_ARRAYAGG(JSON_OBJECT(
+					'order_id', B.id,
+					'order_date', B.date,
+					'items', (SELECT JSON_ARRAYAGG(
+						JSON_OBJECT(
+							'name', D.name,
+							'quantity', C.quantity,
+							'unit_price', C.individual_price
+						))
+						FROM orderproducts C
+						INNER JOIN products D ON C.productid = D.id
+						WHERE C.orderid = B.id
+					)
+				))
+				FROM orders B
+				WHERE B.userid = A.id
+			)
+		)) AS userOrders
+		FROM users A
+		`;
+	try {
+		const [result,_] = await db.query(sql);
+		res.setHeader('Content-Type','application/json');
+		res.send(result[0].userOrders);
+	} catch(err) {
+		console.error(err);
+	}
+})
+
+app.listen(PORT, () => {
+        console.log(`Server listening on port ${PORT}`);
+})
