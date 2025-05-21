@@ -28,13 +28,14 @@ const createOrder = async (req,res) => {
 		await db().query("COMMIT");
 	} catch(err) {
 		await db().query("ROLLBACK");
-		console.error(err)
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
 const getOrders = async (req,res) => {
 	const sql = `
-		SELECT JSON_ARRAYAGG(JSON_OBJECT(
+		SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(
 			'order_id', A.id,
 			'buyer', CONCAT(first_name," ",last_name),
 			'order_date', A.date,
@@ -49,7 +50,7 @@ const getOrders = async (req,res) => {
 				INNER JOIN products D ON C.productid = D.id
 				WHERE C.orderid = A.id
 			)
-		)) AS orders
+		)), JSON_OBJECT()) AS orders
 		FROM orders A
 		INNER JOIN users B on A.userid = B.id
 		`;
@@ -58,7 +59,8 @@ const getOrders = async (req,res) => {
 		res.setHeader('Content-Type','application/json');
 		res.send(result[0].orders);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
