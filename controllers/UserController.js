@@ -20,7 +20,11 @@ const createUser = async (req,res) => {
 			email
 		});
 	} catch(err) {
-		console.log(error);
+		if(err.code == "ER_DUP_ENTRY") res.status(409).send({message: "Email already registered"});
+		else {
+			res.status(500).send({message: "Internal Server Error"});
+			console.log(err);
+		}
 	}
 }
 
@@ -38,7 +42,12 @@ const updateUser = async (req,res) => {
 		const [result,_] = await db().execute(sql, [first_name, last_name, email, id]); // TODO add password
 		res.send(result);
         } catch(err) {
-		console.error(err);
+		if(err.code == "ER_DUP_ENTRY")
+			res.status(409).send({message: "Email already registered"});
+		else {
+			res.status(500).send({message: "Internal Server Error"});
+			console.log(err);
+		}
 	}
 }
 
@@ -48,7 +57,8 @@ const getUsers = async (req,res) => {
 		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -63,7 +73,8 @@ const getUser = async (req,res) => {
 		if(result.length > 0) res.send(result);
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -75,13 +86,14 @@ const deleteUser = async (req,res) => {
 		if(result.affectedRows > 0) res.send({message:"OK"});
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
 const getUserOrders = async (req,res) => {
 	const sql = `
-		SELECT JSON_ARRAYAGG(JSON_OBJECT(
+		SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(
 			'user_id', A.id,
 			'first_name', A.first_name,
 			'last_name', A.last_name,
@@ -98,14 +110,14 @@ const getUserOrders = async (req,res) => {
 							'unit_price', C.unit_price
 						))
 						FROM orderproducts C
-						INNER JOIN products D ON C.productid = D.id
+						LEFT JOIN products D ON C.productid = D.id
 						WHERE C.orderid = B.id
 					)
 				))
 				FROM orders B
 				WHERE B.userid = A.id
 			), JSON_ARRAY())
-		)) AS userOrders
+		)), JSON_ARRAY()) AS userOrders
 		FROM users A
 		`;
 	try {
@@ -113,7 +125,8 @@ const getUserOrders = async (req,res) => {
 		res.setHeader('Content-Type','application/json');
 		res.send(result[0].userOrders);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
