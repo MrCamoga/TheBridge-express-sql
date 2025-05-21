@@ -7,7 +7,7 @@ const createCategory = async (req,res) => {
 	}
 	const sql = `INSERT INTO categories (name) VALUES (?)`;
 	try {
-		const [result,_] = await db.execute(sql, [name]);
+		const [result,_] = await db().execute(sql, [name]);
 		res.send({
 			id: result.insertId,
 			name: name.toString()
@@ -28,7 +28,7 @@ const updateCategory = async (req,res) => {
 	}
 	const sql = `UPDATE categories SET name = COALESCE(?,name) WHERE id = ?`;
 	try {
-		const [result,_] = await db.execute(sql, [name,id]);
+		const [result,_] = await db().execute(sql, [name,id]);
 		if(result.affectedRows > 0) res.send({message:"OK"});
 		else res.status(404).send({message: "Not Found"});
 	} catch(err) {
@@ -39,7 +39,7 @@ const updateCategory = async (req,res) => {
 const getCategories = async (req, res) => {
 	const sql = `SELECT * FROM categories`;
 	try {
-		const [result,fields] = await db.execute(sql);
+		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
 		console.error(err);
@@ -53,7 +53,7 @@ const getCategory = async (req,res) => {
 	}
 	const sql = `SELECT * FROM categories WHERE id = ?`;
 	try {
-		const [result,fields] = await db.execute(sql,[id]);
+		const [result,fields] = await db().execute(sql,[id]);
 		if(result.length > 0) res.send(result);
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {

@@ -15,19 +15,19 @@ const createOrder = async (req,res) => {
 		INNER JOIN products B ON A.productid = B.id
 	`;
 	try {
-		await db.query("START TRANSACTION");
-		const [result,_] = await db.execute(sql_order, [userid]);
+		await db().query("START TRANSACTION");
+		const [result,_] = await db().execute(sql_order, [userid]);
 		const orderid = result.insertId;
-		const [result2,__] = await db.query(sql_items, [items, orderid]);
+		const [result2,__] = await db().query(sql_items, [items, orderid]);
 		res.send({
 			id: orderid,
 			userid,
 			date: new Date()
 		});
 
-		await db.query("COMMIT");
+		await db().query("COMMIT");
 	} catch(err) {
-		await db.query("ROLLBACK");
+		await db().query("ROLLBACK");
 		console.error(err)
 	}
 }
@@ -54,7 +54,7 @@ const getOrders = async (req,res) => {
 		INNER JOIN users B on A.userid = B.id
 		`;
 	try {
-		const [result,_] = await db.query(sql);
+		const [result,_] = await db().query(sql);
 		res.setHeader('Content-Type','application/json');
 		res.send(result[0].orders);
 	} catch(err) {
