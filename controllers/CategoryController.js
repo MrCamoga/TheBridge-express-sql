@@ -13,7 +13,8 @@ const createCategory = async (req,res) => {
 			name: name.toString()
 		});
 	} catch(err) {
-		console.error(err)
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -32,7 +33,8 @@ const updateCategory = async (req,res) => {
 		if(result.affectedRows > 0) res.send({message:"OK"});
 		else res.status(404).send({message: "Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -42,7 +44,8 @@ const getCategories = async (req, res) => {
 		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -57,7 +60,8 @@ const getCategory = async (req,res) => {
 		if(result.length > 0) res.send(result);
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
