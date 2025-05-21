@@ -16,18 +16,19 @@ const createProduct = async (req,res) => {
 			category_id
 		});
 	} catch(err) {
-		console.error(err)
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
 const updateProduct = async (req,res) => {
 	const id = +req.params.id;
 	if(isNaN(id)) {
-		return res.status(400).send("Id must be numeric");
+		return res.status(400).send({message: "Id must be numeric"});
 	}
         const { name = null, description = null, category_id = null } = req.body;
         if(name === "") {
-		return res.status(400).send("Name cannot be null");
+		return res.status(400).send({message: "Name cannot be null"});
 	}
 	const sql = `UPDATE products SET name = COALESCE(?,name), description = COALESCE(?,description), category_id = COALESCE(?,category_id) WHERE id = ?`;
         try {
@@ -35,7 +36,8 @@ const updateProduct = async (req,res) => {
 		if(result.affectedRows > 0) res.send({message:"OK"});
 		else res.status(404).send({message: "Not Found"});
         } catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -45,7 +47,8 @@ const getProducts = async (req, res) => {
 		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -55,7 +58,8 @@ const getProductsCat = async (req, res) => {
 		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -68,7 +72,8 @@ const getProduct = async (req,res) => {
 		if(result.length > 0) res.send(result);
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -78,7 +83,8 @@ const getSortedProducts = async (req, res) => {
 		const [result,fields] = await db().execute(sql);
 		res.send(result);
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
@@ -90,7 +96,8 @@ const deleteProduct = async (req,res) => {
 		if(result.affectedRows > 0) res.send({message:"OK"});
 		else res.status(404).send({message:"Not Found"});
 	} catch(err) {
-		console.error(err);
+		res.status(500).send({message: "Internal Server Error"});
+		console.log(err);
 	}
 }
 
