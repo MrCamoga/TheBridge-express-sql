@@ -10,7 +10,7 @@ module.exports = {
 		const sql = `INSERT INTO categories (name) VALUES (?)`;
 		try {
 			const [result,_] = await db().execute(sql, [name]);
-			res.send({
+			res.status(201).send({
 				id: result.insertId,
 				name: name.toString()
 			});

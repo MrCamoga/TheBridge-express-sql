@@ -9,7 +9,7 @@ module.exports = {
 		const sql = `INSERT INTO products (name,description,category_id,price) VALUES (?,?,?,?)`;
 		try {
 			const [result,_] = await db().execute(sql, [name,description,category_id,price]);
-			res.send({
+			res.status(201).send({
 				id: result.insertId,
 				name: name.toString(),
 				description,

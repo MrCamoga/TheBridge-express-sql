@@ -14,7 +14,7 @@ module.exports = {
 			SELECT fname,lname,email,salt,SHA2(CONCAT(salt,password),512) AS password FROM data`;
 		try {
 			const [result,_] = await db().execute(sql, [first_name,last_name,email,password]);
-			res.send({
+			res.status(201).send({
 				id: result.insertId,
 				first_name,
 				last_name,
@@ -41,7 +41,7 @@ module.exports = {
 		const sql = `UPDATE users SET first_name = COALESCE(?,first_name), last_name = COALESCE(?,last_name), email = COALESCE(?,email) WHERE id = ?`;
 		try {
 			const [result,_] = await db().execute(sql, [first_name, last_name, email, id]); // TODO add password
-			res.send(result);
+			res.send({message:"OK"});
 		} catch(err) {
 			if(err.code == "ER_DUP_ENTRY")
 				res.status(409).send({message: "Email already registered"});

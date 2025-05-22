@@ -20,7 +20,7 @@ module.exports = {
 			const [result,_] = await db().execute(sql_order, [userid]);
 			const orderid = result.insertId;
 			const [result2,__] = await db().query(sql_items, [items, orderid]);
-			res.send({
+			res.status(201).send({
 				id: orderid,
 				userid,
 				date: new Date()
