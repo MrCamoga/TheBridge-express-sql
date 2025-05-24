@@ -38,9 +38,9 @@ module.exports = {
 		if(first_name === "" || email === "" || password === "") {
 			return res.status(400).send("Invalid body");
 		}
-		const sql = `UPDATE users SET first_name = COALESCE(?,first_name), last_name = COALESCE(?,last_name), email = COALESCE(?,email) WHERE id = ?`;
+		const sql = `UPDATE users SET first_name = COALESCE(?,first_name), last_name = COALESCE(?,last_name), email = COALESCE(?,email), password = IF(? IS NULL, password, SHA2(CONCAT(salt,?),512)) WHERE id = ?`;
 		try {
-			const [result,_] = await db().execute(sql, [first_name, last_name, email, id]); // TODO add password
+			const [result,_] = await db().execute(sql, [first_name, last_name, email, password, password, id]);
 			if(result.affectedRows > 0) res.send({message:"OK"});
 			else res.status(404).send({message:"Not Found"});
 		} catch(err) {
